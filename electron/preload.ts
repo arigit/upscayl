@@ -1,4 +1,4 @@
-import { ipcRenderer, contextBridge } from "electron";
+import { ipcRenderer, contextBridge, webUtils } from "electron";
 import {
   getAppVersion,
   getDeviceSpecs,
@@ -17,4 +17,6 @@ contextBridge.exposeInMainWorld("electron", {
   platform: getPlatform(),
   getSystemInfo: async () => await getDeviceSpecs(),
   getAppVersion: async () => await getAppVersion(),
+  // File.path was removed in Electron 32
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
 });
