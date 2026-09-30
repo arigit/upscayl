@@ -1,4 +1,4 @@
-import { ImageFormat } from "@/lib/valid-formats";
+import { ImageFormat, VALID_IMAGE_FORMATS } from "@/lib/valid-formats";
 import { ModelId } from "@common/models-list";
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
@@ -14,9 +14,37 @@ export const selectedModelIdAtom = atomWithStorage<ModelId | string>(
 );
 export const doubleUpscaylAtom = atomWithStorage("doubleUpscayl", false);
 export const gpuIdAtom = atomWithStorage("gpuId", "");
+const isImageFormat = (value: unknown): value is ImageFormat =>
+  (VALID_IMAGE_FORMATS as readonly unknown[]).includes(value);
+
+/**
+ * Versions <= 2.15.1 wrote the format to localStorage as a raw string
+ * (e.g. `jpg`) instead of JSON (`"jpg"`). The default JSON storage fails to
+ * parse that and silently falls back to "png", so the chosen format was lost
+ * on every restart. Accept both forms and ignore anything that isn't a valid
+ * format.
+ */
+const imageFormatStorage = {
+  getItem: (key: string, initialValue: ImageFormat): ImageFormat => {
+    const storedValue = localStorage.getItem(key);
+    if (storedValue === null) return initialValue;
+    let value: unknown = storedValue;
+    try {
+      value = JSON.parse(storedValue);
+    } catch {
+      // Legacy raw string value
+    }
+    return isImageFormat(value) ? value : initialValue;
+  },
+  setItem: (key: string, value: ImageFormat) =>
+    localStorage.setItem(key, JSON.stringify(value)),
+  removeItem: (key: string) => localStorage.removeItem(key),
+};
+
 export const saveImageAsAtom = atomWithStorage<ImageFormat>(
   "saveImageAs",
   "png",
+  imageFormatStorage,
 );
 
 export const scaleAtom = atomWithStorage<string>("scale", "4");
